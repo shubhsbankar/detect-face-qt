@@ -3,7 +3,7 @@
 
 #include <QMainWindow>
 #include <opencv2/opencv.hpp>
-
+#include "facedetectionthread.h"
 QT_BEGIN_NAMESPACE
 namespace Ui {
 class MainWindow;
@@ -18,7 +18,11 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
-private slots:
+public Q_SLOTS:
+    void onFaceDetectionThreadFinished();
+    void onFrameCaptured(cv::Mat frame);
+
+private Q_SLOTS:
     void onPushButtonClicked();
 
     void on_cameraOnOffBut_clicked();
@@ -31,6 +35,8 @@ private slots:
 
     void on_detectFace_clicked();
 
+
+
 private:
     Ui::MainWindow *ui;
     cv::VideoCapture videoCapture;
@@ -41,7 +47,13 @@ private:
     cv::Mat faceROI;
     cv::Mat image;
     QString filePath;
+    cv::dnn::Net emotionNet;
+    QStringList emotionLabels = {"Angry", "Disgust", "Fear", "Happy", "Sad", "Surprise", "Neutral"};
+    bool mIsCameraOn = false;
+    FaceDetectionThread* mFaceDetectionThread = nullptr;
     void detectAndDrawFaces();
     void loadImage(bool detectFace = false);
+    QImage putImage(const cv::Mat &mat);
+    QString analyzeEmotion(const cv::Mat &frame);
 };
 #endif // MAINWINDOW_H

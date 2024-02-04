@@ -2,69 +2,28 @@
 #include "ui_mainwindow.h"
 #include <QFileDialog>
 #include <QVBoxLayout>
-#include <Python.h>
+#include <dlib/opencv.h>
+#include <dlib/image_processing/frontal_face_detector.h>
+#include <dlib/image_processing.h>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-     faceCascade.load("C:/opencv/sources/data/haarcascades_cuda/haarcascade_frontalface_default.xml");
-    eyeCascade.load("C:/opencv/sources/data/haarcascades_cuda/haarcascade_eye.xml");
-    noseCascade.load("C:/opencv/sources/data/haarcascades_cuda/haarcascade_mcs_nose.xml");
-    mouthCascade.load(cv::samples::findFile("C:/opencv/sources/data/haarcascades_cuda/haarcascade_smile.xml"));
-    //emotionNet = cv::dnn::readNetFromTensorflow("model.pb");
-    //showFullScreen();
-    qDebug() << "Hello Shubham : " << getpid();
+    faceCascade.load("./opencv/sources/data/haarcascades/haarcascade_frontalface_default.xml");
+    mouthCascade.load("./opencv/sources/data/haarcascades/haarcascade_frontalface_default.xml");
     mFaceDetectionThread = new FaceDetectionThread(this);
     // Add this line to the constructor or setup function
     connect(mFaceDetectionThread, &FaceDetectionThread::finished, this, &MainWindow::onFaceDetectionThreadFinished);
     connect(mFaceDetectionThread, &FaceDetectionThread::frameCaptured, this, &MainWindow::onFrameCaptured);
+    qDebug() << getpid();
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
 }
-
-// void MainWindow::onPushButtonClicked()
-// {
-//     videoCapture.open(0);
-//     if (!videoCapture.isOpened())
-//     {
-//         qDebug() << "Error opening camera.";
-//     }
-//     cv::Mat frame;
-//     videoCapture >> frame;
-
-//     if (!frame.empty())
-//     {
-//         image = frame;
-//         filePath = "temp.png";
-//         cv::imwrite(filePath.toStdString(), frame);
-//         // cv::Mat grayFrame;
-//         // cv::cvtColor(frame, grayFrame, cv::COLOR_BGR2GRAY);
-//         // cv::equalizeHist(grayFrame, grayFrame);
-
-//         // std::vector<cv::Rect> faces;
-//         // faceCascade.detectMultiScale(grayFrame, faces, 1.1, 2, 0 | cv::CASCADE_SCALE_IMAGE, cv::Size(30, 30));
-
-//         // for (const auto &face : faces)
-//         // {
-//         //     cv::rectangle(frame, face, cv::Scalar(0, 255, 0), 2);
-//         //     faceROI = grayFrame(face);
-//         // }
-
-//         //cv::imshow("Face Recognition", frame);
-//         //detectAndDrawFaces();
-//         cv::Mat rgbMat;
-//         cv::cvtColor(frame, rgbMat, cv::COLOR_BGR2RGB);
-//         QImage img(rgbMat.data, rgbMat.cols, rgbMat.rows, rgbMat.step, QImage::Format_RGB888);
-//         ui->cameraLabel->setPixmap(QPixmap::fromImage(img));
-//         // QVBoxLayout *layout = new QVBoxLayout(ui->centralwidget);
-//         // ui->centralwidget->setLayout(layout);
-//     }
-// }
 
 void MainWindow::onPushButtonClicked()
 {
@@ -93,102 +52,79 @@ void MainWindow::on_cameraOnOffBut_clicked()
     onPushButtonClicked();
 }
 
+QString MainWindow::detectEmotionDlib(const cv::Mat &face) {
+    dlib::frontal_face_detector detector = dlib::get_frontal_face_detector();
+    dlib::shape_predictor sp;
+    dlib::deserialize("shape_predictor_68_face_landmarks.dat") >> sp;  // Load a shape predictor model
+    dlib::cv_image<dlib::bgr_pixel> dlibImage(face);
+    std::vector<dlib::rectangle> detectedFaces = detector(dlibImage);
+    dlib::rectangle faceRect;
+    if (!detectedFaces.empty()) {
+         faceRect = detectedFaces[0];
+        dlib::full_object_detection landmarks = sp(dlibImage, faceRect);
+        // Here, we just return a placeholder string based on the face's left and right landmarks
+        int leftEyeX = landmarks.part(36).x();
+        int rightEyeX = landmarks.part(45).x();
+        int mouthX = (landmarks.part(48).x() + landmarks.part(54).x()) / 2;
 
-void MainWindow::on_cameraOnOffBut_released()
-{
-    videoCapture.release();
+        if (mouthX < leftEyeX && mouthX < rightEyeX) {
+            return "Surprise";
+        } else if (mouthX < leftEyeX && mouthX > rightEyeX) {
+            return "Happy";
+        } else {
+            return "Neutral";
+        }
+        // Your code to handle the detected face
+    } else {
+        qDebug() << "No face detected.";
+    }
+
+    return QString();
 }
-
-
 
 void MainWindow::on_detectEmotion_clicked()
 {
-    std::vector<cv::Rect> mouths;
-    mouthCascade.detectMultiScale(faceROI, mouths, 1.8, 20, 0, cv::Size(20, 20));
+    cv::Mat grayImage;
+    cv::cvtColor(image, grayImage, cv::COLOR_BGR2GRAY);
+    cv::equalizeHist(grayImage, grayImage);
 
-    // Check if a mouth is detected
-    if (!mouths.empty()) {
-        // Assume the person is happy if a mouth is detected
-        QString emotion = "Happy";
+    // Detect faces in the image
+    std::vector<cv::Rect> faces;
+    faceCascade.detectMultiScale(grayImage, faces, 1.1, 3, 0, cv::Size(30, 30));
 
-        // Display the emotion label on the GUI
+    // Draw rectangles around detected faces
+    for (const cv::Rect &faceRect : faces)
+    {
+        QString emotion = detectEmotionDlib(faceROI(faceRect));
+        qDebug() << emotion;
+        emotion += " " + ui->emotionLabel->text();
         ui->emotionLabel->setText(emotion);
-    } else {
-        // No mouth detected, assume neutral emotion
-        QString emotion = "Neutral";
+        cv::rectangle(image, faceRect, cv::Scalar(0, 255, 0), 2);
+    }
+ }
 
-        // Display the emotion label on the GUI
-        ui->emotionLabel->setText(emotion);
-    }
-}
-QImage MainWindow::putImage(const cv::Mat& mat)
-{
-    // 8-bits unsigned, NO. OF CHANNELS=1
-    if(mat.type()==CV_8UC1)
-    {
-        // Set the color table (used to translate colour indexes to qRgb values)
-        QVector<QRgb> colorTable;
-        for (int i=0; i<256; i++)
-            colorTable.push_back(qRgb(i,i,i));
-        // Copy input Mat
-        const uchar *qImageBuffer = (const uchar*)mat.data;
-        // Create QImage with same dimensions as input Mat
-        QImage img(qImageBuffer, mat.cols, mat.rows, mat.step, QImage::Format_Indexed8);
-        img.setColorTable(colorTable);
-        return img;
-    }
-    // 8-bits unsigned, NO. OF CHANNELS=3
-    if(mat.type()==CV_8UC3)
-    {
-        // Copy input Mat
-        const uchar *qImageBuffer = (const uchar*)mat.data;
-        // Create QImage with same dimensions as input Mat
-        QImage img(qImageBuffer, mat.cols, mat.rows, mat.step, QImage::Format_RGB888);
-        return img.rgbSwapped();
-    }
-    else
-    {
-        qDebug() << "ERROR: Mat could not be converted to QImage.";
-        return QImage();
-    }
-}
 void MainWindow::loadImage(bool detectFace)
 {
     if (!filePath.isEmpty())
     {
         // Load the selected image
         cv::Mat originalImage = cv::imread(filePath.toStdString());
-
+        // Resize the image to a specific width and height
+        QSize labelSize = ui->cameraLabel->size();
+        cv::resize(originalImage, image, cv::Size(labelSize.width(), labelSize.height()));
         if (!originalImage.empty())
         {
-            // Resize the image to fit within the QLabel while maintaining aspect ratio
-            if (filePath.compare("temp.png") != 0)
-            {
-            QSize labelSize = ui->cameraLabel->size();
-            //cv::Mat resizedImage;
-            double aspectRatio = static_cast<double>(originalImage.cols) / originalImage.rows;
-            int newWidth = static_cast<int>(labelSize.height() * aspectRatio);
-            cv::resize(originalImage, image, cv::Size(newWidth, labelSize.height()));
-            }
-            else
-            {
-                image = originalImage;
-            }
-            //image = originalImage;
-            //ui->cameraLabel->setFixedSize(image.cols,image.rows);
             if (detectFace)
             {
                 detectAndDrawFaces();
             }
-            // Convert the resized image to a QImage
-            //QImage img(image.data, image.cols, image.rows, image.step, QImage::Format_RGB888);
-
+            QImage qImage(image.data, image.cols, image.rows, image.step, QImage::Format_BGR888);
             // Display the processed image in the QLabel widget
-            ui->cameraLabel->setPixmap(QPixmap::fromImage(putImage(image)));
+             ui->cameraLabel->setPixmap(QPixmap::fromImage(qImage));
         }
         else
         {
-            qDebug() << "Error: Failed to load the image.";
+            qCritical() << "Error: Failed to load the image.";
         }
     }
 }
@@ -209,30 +145,14 @@ void MainWindow::detectAndDrawFaces()
 
     // Detect faces in the image
     std::vector<cv::Rect> faces;
-    faceCascade.detectMultiScale(grayImage, faces, 1.1, 3, 0, cv::Size(30, 30));
+    faceCascade.detectMultiScale(grayImage, faces, 1.1, 2, 0 | cv::CASCADE_SCALE_IMAGE, cv::Size(30, 30));
 
     // Draw rectangles around detected faces
     for (const cv::Rect &faceRect : faces)
     {
+        qDebug() << "Got face : ";
         cv::rectangle(image, faceRect, cv::Scalar(255, 0, 0), 2);
-       // cv::Mat faceROI = image(faceRect);
-
-       //  // Resize the face image to match the input size of the emotion model
-       //  cv::Mat blob = cv::dnn::blobFromImage(faceROI, 1.0, cv::Size(48, 48), cv::Scalar(0, 0, 0), false, false);
-
-       //  emotionNet.setInput(blob);
-       //  cv::Mat emotions = emotionNet.forward();
-
-       //  // Find the index of the most probable emotion
-       //  cv::Point maxLoc;
-       //  cv::minMaxLoc(emotions, nullptr, nullptr, nullptr, &maxLoc);
-
-       //  int emotionIndex = maxLoc.x;
-
-       //  qDebug() << "Emotion is : " << emotionLabels.at(emotionIndex);
-        // Analyze emotion for each frame
-        QString emotion = analyzeEmotion(image);
-        setWindowTitle("Qt with deepface - Emotion: " + emotion);
+        faceROI = image;
     }
 }
 
@@ -249,60 +169,18 @@ void MainWindow::onFaceDetectionThreadFinished()
 {
     ui->cameraLabel->clear();
     ui->emotionLabel->setText("");
-    qDebug() << "Face detection thread finished.";
+    qInfo() << "Face detection thread finished.";
 }
 
+// Show all the frames captured from the webcam
 void MainWindow::onFrameCaptured(cv::Mat frame)
 {
     image = frame;
+    // Calling function to detect the face
     detectAndDrawFaces();
+    // Showing the frames on the main window
     cv::Mat rgbMat;
     cv::cvtColor(frame, rgbMat, cv::COLOR_BGR2RGB);
     QImage img(rgbMat.data, rgbMat.cols, rgbMat.rows, rgbMat.step, QImage::Format_RGB888);
     ui->cameraLabel->setPixmap(QPixmap::fromImage(img));
-}
-
-
-QString MainWindow::analyzeEmotion(const cv::Mat &frame)
-{
-    Py_Initialize();
-
-    // Convert OpenCV frame to temporary image file
-    QString tempImagePath = QDir::tempPath() + "/temp_image.jpg";
-    cv::imwrite(tempImagePath.toStdString(), frame);
-
-    // Convert QString to Python string
-    qDebug() << tempImagePath.toStdString().c_str();
-    qDebug() << PyBytes_Check(tempImagePath.toStdString().c_str());
-    PyObject *pImagePath = PyUnicode_DecodeFSDefault(tempImagePath.toStdString().c_str());
-
-    // Import the Python script
-    PyObject *pName = PyUnicode_DecodeFSDefault("emotion_detection");
-    PyObject *pModule = PyImport_Import(pName);
-    Py_XDECREF(pName);
-
-    if (pModule != NULL) {
-        // Call the Python function
-        PyObject *pFunc = PyObject_GetAttrString(pModule, "analyze_emotion");
-        if (pFunc && PyCallable_Check(pFunc)) {
-            PyObject *pValue = PyObject_CallFunctionObjArgs(pFunc, pImagePath, NULL);
-            Py_XDECREF(pFunc);
-
-            if (pValue != NULL) {
-                // Convert Python string to QString
-                QString emotion = QString::fromStdString(PyUnicode_AsUTF8(pValue));
-                Py_XDECREF(pValue);
-
-                // Remove temporary image file
-                QFile::remove(tempImagePath);
-
-                return emotion;
-            }
-        }
-    }
-
-    // Handle errors or return an empty string
-    PyErr_Print();
-    Py_Finalize();
-    return QString();
 }

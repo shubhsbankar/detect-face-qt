@@ -13,7 +13,7 @@ QT_END_NAMESPACE
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
-
+    //Q_PROPERTY(bool mIsCameraOn READ getMIsCameraOn WRITE setMIsCameraOn NOTIFY mIsCameraOnChanged);
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
@@ -26,8 +26,6 @@ private Q_SLOTS:
     void onPushButtonClicked();
 
     void on_cameraOnOffBut_clicked();
-
-    void on_cameraOnOffBut_released();
 
     void on_detectEmotion_clicked();
 
@@ -47,13 +45,12 @@ private:
     cv::Mat faceROI;
     cv::Mat image;
     QString filePath;
-    cv::dnn::Net emotionNet;
-    QStringList emotionLabels = {"Angry", "Disgust", "Fear", "Happy", "Sad", "Surprise", "Neutral"};
     bool mIsCameraOn = false;
     FaceDetectionThread* mFaceDetectionThread = nullptr;
     void detectAndDrawFaces();
     void loadImage(bool detectFace = false);
     QImage putImage(const cv::Mat &mat);
     QString analyzeEmotion(const cv::Mat &frame);
+    QString detectEmotionDlib(const cv::Mat &face);
 };
 #endif // MAINWINDOW_H

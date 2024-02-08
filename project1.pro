@@ -1,7 +1,7 @@
 QT       += core gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
-# TARGET= FaceDetection.exe
+TARGET= FaceDetection
 CONFIG += c++17
 # CONFIG += link_pkgconfig
 # PKGCONFIG += python

@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <opencv2/opencv.hpp>
 #include "facedetectionthread.h"
+#include <QProcess>
 QT_BEGIN_NAMESPACE
 namespace Ui {
 class MainWindow;
@@ -18,10 +19,13 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
+    void detectEmotion();
+    QString getLastWord(const QString &output);
 public Q_SLOTS:
     void onFaceDetectionThreadFinished();
     void onFrameCaptured(cv::Mat frame);
 
+    void onProcessFinished();
 private Q_SLOTS:
     void onPushButtonClicked();
 
@@ -32,8 +36,10 @@ private Q_SLOTS:
     void on_selectImage_clicked();
 
     void on_detectFace_clicked();
+    void onEnableDetEmoBut(bool enable);
 
-
+Q_SIGNALS :
+    void enableDetEmoBut(bool);
 
 private:
     Ui::MainWindow *ui;
@@ -45,6 +51,7 @@ private:
     cv::Mat faceROI;
     cv::Mat image;
     QString filePath;
+    QProcess *mProcessPtr = nullptr;
     bool mIsCameraOn = false;
     FaceDetectionThread* mFaceDetectionThread = nullptr;
     void detectAndDrawFaces();

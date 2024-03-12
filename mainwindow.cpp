@@ -2,17 +2,19 @@
 #include "ui_mainwindow.h"
 #include <QFileDialog>
 #include <QVBoxLayout>
-#include <dlib/opencv.h>
-#include <dlib/image_processing/frontal_face_detector.h>
-#include <dlib/image_processing.h>
+// #include <dlib/opencv.h>
+// #include <dlib/image_processing/frontal_face_detector.h>
+// #include <dlib/image_processing.h>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    faceCascade.load(cv::samples::findFile("haarcascades/haarcascade_frontalface_default.xml"));
-    mouthCascade.load(cv::samples::findFile("haarcascades/haarcascade_frontalface_default.xml"));
+    faceCascade.load("opencv\\sources\\data\\haarcascades\\haarcascade_frontalface_default.xml");
+    mouthCascade.load("opencv\\sources\\data\\haarcascades\\haarcascade_frontalface_default.xml");
+    // faceCascade.load(cv::samples::findFile("haarcascades/haarcascade_frontalface_default.xml"));
+    // mouthCascade.load(cv::samples::findFile("haarcascades/haarcascade_frontalface_default.xml"));
     mFaceDetectionThread = new FaceDetectionThread(this);
     // Add this line to the constructor or setup function
     connect(mFaceDetectionThread, &FaceDetectionThread::finished, this, &MainWindow::onFaceDetectionThreadFinished);
@@ -58,40 +60,40 @@ void MainWindow::on_cameraOnOffBut_clicked()
     onPushButtonClicked();
 }
 
-QString MainWindow::detectEmotionDlib(const cv::Mat &face) {
-    dlib::frontal_face_detector detector = dlib::get_frontal_face_detector();
-    dlib::shape_predictor sp;
-    dlib::deserialize("./dlib/shape_predictor_68_face_landmarks.dat") >> sp;  // Load a shape predictor model
-    dlib::cv_image<dlib::bgr_pixel> dlibImage(face);
-    std::vector<dlib::rectangle> detectedFaces = detector(dlibImage);
-    dlib::rectangle faceRect;
-    if (!detectedFaces.empty()) {
-        qDebug() << "size : " << detectedFaces.size();
-         faceRect = detectedFaces[0];
-        dlib::full_object_detection landmarks = sp(dlibImage, faceRect);
-        // Here, we just return a placeholder string based on the face's left and right landmarks
-        int leftEyeX = landmarks.part(36).x();
-        int rightEyeX = landmarks.part(45).x();
-        int mouthX = (landmarks.part(48).x() + landmarks.part(54).x()) / 2;
+// QString MainWindow::detectEmotionDlib(const cv::Mat &face) {
+//     dlib::frontal_face_detector detector = dlib::get_frontal_face_detector();
+//     dlib::shape_predictor sp;
+//     dlib::deserialize("./dlib/shape_predictor_68_face_landmarks.dat") >> sp;  // Load a shape predictor model
+//     dlib::cv_image<dlib::bgr_pixel> dlibImage(face);
+//     std::vector<dlib::rectangle> detectedFaces = detector(dlibImage);
+//     dlib::rectangle faceRect;
+//     if (!detectedFaces.empty()) {
+//         qDebug() << "size : " << detectedFaces.size();
+//          faceRect = detectedFaces[0];
+//         dlib::full_object_detection landmarks = sp(dlibImage, faceRect);
+//         // Here, we just return a placeholder string based on the face's left and right landmarks
+//         int leftEyeX = landmarks.part(36).x();
+//         int rightEyeX = landmarks.part(45).x();
+//         int mouthX = (landmarks.part(48).x() + landmarks.part(54).x()) / 2;
 
-        if (mouthX < leftEyeX && mouthX < rightEyeX) {
-            return "Surprise";
-        } else if (mouthX < leftEyeX && mouthX > rightEyeX) {
-            return "Happy";
-        } else {
-            qDebug() << "mouthX : " << mouthX;
-            qDebug() << "leftEyeX : " << leftEyeX;
-            qDebug() << "mouthX : " << rightEyeX;
-            //qDebug() << "mouthX : " << mouthX;
-            return "Neutral";
-        }
-        // Your code to handle the detected face
-    } else {
-        qDebug() << "No face detected.";
-    }
+//         if (mouthX < leftEyeX && mouthX < rightEyeX) {
+//             return "Surprise";
+//         } else if (mouthX < leftEyeX && mouthX > rightEyeX) {
+//             return "Happy";
+//         } else {
+//             qDebug() << "mouthX : " << mouthX;
+//             qDebug() << "leftEyeX : " << leftEyeX;
+//             qDebug() << "mouthX : " << rightEyeX;
+//             //qDebug() << "mouthX : " << mouthX;
+//             return "Neutral";
+//         }
+//         // Your code to handle the detected face
+//     } else {
+//         qDebug() << "No face detected.";
+//     }
 
-    return QString();
-}
+//     return QString();
+// }
 
 void MainWindow::on_detectEmotion_clicked()
 {
@@ -163,7 +165,6 @@ void MainWindow::detectAndDrawFaces()
     // Draw rectangles around detected faces
     for (const cv::Rect &faceRect : faces)
     {
-        qDebug() << "Got face : ";
         cv::rectangle(image, faceRect, cv::Scalar(255, 0, 0), 2);
         faceROI = image;
     }
@@ -209,7 +210,7 @@ void MainWindow::onFrameCaptured(cv::Mat frame)
 void MainWindow::detectEmotion() {
      // Invoke Python script
     //QProcess process;
-     mProcessPtr->start("python", QStringList() << "C:\\Users\\shubh\\emotion_detection.py" << filePath);
+     mProcessPtr->start("python", QStringList() << "emotion_detection.py" << filePath);
 }
 
 QString MainWindow::getLastWord(const QString &output) {

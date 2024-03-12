@@ -58,6 +58,6 @@ private:
     void loadImage(bool detectFace = false);
     QImage putImage(const cv::Mat &mat);
     QString analyzeEmotion(const cv::Mat &frame);
-    QString detectEmotionDlib(const cv::Mat &face);
+    //QString detectEmotionDlib(const cv::Mat &face);
 };
 #endif // MAINWINDOW_H

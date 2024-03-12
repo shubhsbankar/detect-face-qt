@@ -8,7 +8,8 @@ FaceDetectionThread::FaceDetectionThread(QObject *parent) : QThread(parent)
 {
     QDir currentDir = QDir::current();
     qDebug() << currentDir;
-    faceCascade.load(cv::samples::findFile("haarcascades/haarcascade_frontalface_default.xml"));
+    //faceCascade.load(cv::samples::findFile("haarcascades/haarcascade_frontalface_default.xml"));
+    faceCascade.load("opencv\\sources\\data\\haarcascades\\haarcascade_frontalface_default.xml");
 }
 
 void FaceDetectionThread::run()

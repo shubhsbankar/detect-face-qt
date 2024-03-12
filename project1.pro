@@ -34,7 +34,7 @@ LIBS += -LC:\opencv\release\bin -lopencv_calib3d490 -lopencv_highgui490 -lopencv
 
 DEPENDPATH +=  C:\opencv\release\install\include
 
-# LIBS += -L'C:\Program Files\Python311\libs' -lpython311
+LIBS += -L'C:\Program Files\Python311\libs' -lpython311
 
 INCLUDEPATH += C:\Users\shubh\Downloads\dlib-19.24\dlib-19.24\include
 LIBS += -LC:\Users\shubh\Downloads\dlib-19.24\dlib-19.24\debug-build -ldlib
